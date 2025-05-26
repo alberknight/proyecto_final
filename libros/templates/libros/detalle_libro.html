@@ -1,0 +1,377 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ libro.titulo }} - Biblioteca Virtual</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/detalle.css' %}">
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <img src="https://via.placeholder.com/40/10b981/FFFFFF?text=B" alt="Logo BiblioVirtual">
+                <h1>BiblioVirtual</h1>
+            </div>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="{% url 'inicio' %}">Inicio</a></li>
+                    <li><a href="{% url 'catalogo' %}" class="active" >Catálogo</a></li>
+                    <li><a href="{% url 'prestamos:prestamos' %}" >Prestamos</a></li>
+                </ul>
+            </nav>
+            <div class="auth-buttons">
+            {% if request.user.is_authenticated %}
+                <span class="welcome-msg">Bienvenido {{ request.user.username }}</span>
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Cerrar sesión</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}" class="btn btn-outline active">Iniciar Sesión</a>
+                <a href="{% url 'registro' %}" class="btn btn-primary">Registrarse</a>
+            {% endif %}
+            </div>
+            <button class="menu-toggle" id="menuToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Menu -->
+    <div id="mobileMenu" class="mobile-menu">
+        <ul>
+            <li><a href="index.html"><i class="fas fa-home"></i> Inicio</a></li>
+            <li><a href="catalogo.html"><i class="fas fa-book"></i> Catálogo</a></li>
+            <li><a href="prestamos.html"><i class="fas fa-book-reader"></i> Préstamos</a></li>
+            <li><a href="eventos.html"><i class="fas fa-calendar-alt"></i> Eventos</a></li>
+            <li><a href="contacto.html"><i class="fas fa-envelope"></i> Contacto</a></li>
+        </ul>
+        <div class="mobile-user">
+            <img src="https://via.placeholder.com/32x32/6366f1/FFFFFF?text=US" alt="Avatar de Usuario"
+                class="user-avatar">
+            <span>Usuario</span>
+        </div>
+        <ul>
+            <li><a href="perfil.html"><i class="fas fa-user"></i> Mi Perfil</a></li>
+            <li><a href="prestamos.html"><i class="fas fa-book-reader"></i> Mis Préstamos</a></li>
+            <li><a href="favoritos.html"><i class="fas fa-heart"></i> Mis Favoritos</a></li>
+            <li><a href="historial.html"><i class="fas fa-history"></i> Historial</a></li>
+            <li><a href="configuracion.html"><i class="fas fa-cog"></i> Configuración</a></li>
+            <li><a href="login.html" class="logout"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <main>
+        <div class="container">
+
+            <div class="book-detail-container">
+                <!-- Información principal del libro -->
+                <div class="book-main-info">
+                    <div class="book-cover">
+                        {% if libro.portada %}
+                            <img src="{{ libro.portada.url }}" alt="Portada de {{ libro.titulo }}">
+                        {% elif libro.portada_url %}
+                            <img src="{{ libro.portada_url }}" alt="Portada de {{ libro.titulo }}">
+                        {% else %}
+                            <img src="https://via.placeholder.com/300x450/6366f1/FFFFFF?text=Sin+Portada"
+                                alt="Portada genérica">
+                        {% endif %}
+                        <div class="book-rating-badge">
+                            <i class="fas fa-star"></i>
+                            <span>{{ promedio_calificacion|floatformat:1 }}</span>
+                        </div>
+                    </div>
+                    <!---
+                    <div class="book-actions">
+                        <button id="requestLoanBtn" class="btn btn-primary">
+                            <i class="fas fa-book-reader"></i>
+                            Solicitar Préstamo
+                        </button>
+                    </div> --->
+
+                    <div class="book-availability">
+                        <div class="availability-status available">
+                            <i class="fas fa-check-circle"></i>
+                            <span>{% if libro.disponibilidad %}Disponible{% else %}No Disponible{% endif %}</span>
+                        </div>
+                        <div class="availability-info">
+                            <span>{{ libro.existencias }} copias disponibles</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detalles del libro -->
+                <div class="book-details">
+                    <h1 class="book-title">{{ libro.titulo }}</h1>
+                    <div class="book-author">
+                        <span>Por</span>
+                        <a href="#" class="author-link">{{ libro.autor }}</a>
+                    </div>
+
+                    <div class="book-rating">
+                    <div class="rating-stars">
+                        {% if promedio_calificacion %}
+                            {% for i in "12345" %}
+                                {% if i <= promedio_calificacion|floatformat:0 %}
+                                    <i class="fas fa-star"></i>
+                                {% elif i == promedio_calificacion|floatformat:0|add:1 and promedio_calificacion|floatformat:1 != promedio_calificacion|floatformat:0 %}
+                                    <i class="fas fa-star-half-alt"></i>
+                                {% else %}
+                                    <i class="far fa-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <span>Sin calificaciones aún</span>
+                        {% endif %}
+                    </div>
+                    <div class="rating-count">
+                        <span>{% with libro.resenas.count as total_resenas %}{{ total_resenas }}{% endwith %} calificaciones</span>
+                    </div>
+                </div>
+
+                    <div class="book-metadata">
+                        <div class="metadata-item">
+                            <span class="metadata-label">Género:</span>
+                            <span class="metadata-value">{{ libro.genero.nombre_genero }}</span>
+                        </div>
+                        <div class="metadata-item">
+                            <span class="metadata-label">Año de publicación:</span>
+                            <span class="metadata-value">{{ libro.año_publicacion }}</span>
+                        </div>
+                        <div class="metadata-item">
+                            <span class="metadata-label">Editorial:</span>
+                            <span class="metadata-value">{{ libro.editorial }}</span>
+                        </div>
+                        <div class="metadata-item">
+                            <span class="metadata-label">ISBN:</span>
+                            <span class="metadata-value">{{ libro.ISBN }}</span>
+                        </div>
+                    </div>
+
+                    <div class="book-synopsis">
+                        <h3>Sinopsis</h3>
+                        <p>
+                            {% if libro.sinopsis %}
+                                {{ libro.sinopsis }}
+                            {% else %}
+                                Sinopsis no disponible.
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="book-tabs">
+                <div class="tabs-header">
+                    <button class="tab-btn active" data-tab="reviews">Reseñas y Calificaciones</button>
+                </div>
+
+                <div class="tabs-content">
+                    <!-- Tab de Reseñas -->
+                    <div id="reviews-tab" class="tab-content active">
+                    <div class="reviews-summary">
+                        <div class="rating-summary">
+                            <div class="average-rating">
+                                <span class="rating-number">{{ promedio_calificacion|floatformat:1 }}</span>
+                                <div class="rating-stars">
+                                    {% if promedio_calificacion %}
+                                        {% for i in "xxxxx"|slice:":{{ promedio_calificacion|floatformat:0 }}" %}
+                                            <i class="fas fa-star"></i>
+                                        {% endfor %}
+                                        {% if promedio_calificacion|floatformat:1 != promedio_calificacion|floatformat:0 %}
+                                            <i class="fas fa-star-half-alt"></i>
+                                        {% endif %}
+                                    {% else %}
+                                        <span>Sin calificaciones aún</span>
+                                    {% endif %}
+                                </div>
+                                <span class="rating-count">{{ total_resenas }} calificaciones</span>
+                            </div>
+
+                            <div class="rating-bars">
+                            {% for item in calificacion_percentages %}
+                                <div class="rating-bar-item">
+                                    <span class="rating-label">{{ item.calificacion }} <i class="fas fa-star"></i></span>
+                                    <div class="rating-bar">
+                                        <div class="rating-fill" style="width: {{ item.percentage|floatformat:0 }}%;"></div>
+                                    </div>
+                                    <span class="rating-percent">{{ item.percentage|floatformat:0 }}%</span>
+                                </div>
+                            {% endfor %}
+                            </div>
+                        </div>
+                          <div class="add-review">
+                              <h3>Califica este libro</h3>
+                              {% if request.user.is_authenticated %}
+                                  <button id="writeReviewBtn" class="btn btn-primary">Escribir una reseña</button>
+                              {% else %}
+                                  <p>Debes <a href="{% url 'login' %}?next={{ request.path }}">iniciar sesión</a> para dejar una reseña.</p>
+                              {% endif %}
+                          </div>
+                        </div>
+
+                        <div class="reviews-filter">
+                        <form method="get" action="{% url 'detalle_libro' libro.id %}#reviews-tab">
+                            <div class="filter-options">
+                                <select id="reviewsSort" name="orden_resenas">
+                                    <option value="recent" {% if request.GET.orden_resenas == 'recent' %}selected{% endif %}>Más recientes</option>
+                                    <option value="highest" {% if request.GET.orden_resenas == 'highest' %}selected{% endif %}>Mayor calificación</option>
+                                    <option value="lowest" {% if request.GET.orden_resenas == 'lowest' %}selected{% endif %}>Menor calificación</option>
+                                </select>
+                                <select id="reviewsFilter" name="calificacion_filter">
+                                    <option value="all" {% if request.GET.calificacion_filter == 'all' %}selected{% endif %}>Todas las calificaciones</option>
+                                    <option value="5" {% if request.GET.calificacion_filter == '5' %}selected{% endif %}>5 estrellas</option>
+                                    <option value="4" {% if request.GET.calificacion_filter == '4' %}selected{% endif %}>4 estrellas</option>
+                                    <option value="3" {% if request.GET.calificacion_filter == '3' %}selected{% endif %}>3 estrellas</option>
+                                    <option value="2" {% if request.GET.calificacion_filter == '2' %}selected{% endif %}>2 estrellas</option>
+                                    <option value="1" {% if request.GET.calificacion_filter == '1' %}selected{% endif %}>1 estrella</option>
+                                </select>
+                                <button type="submit" class="btn btn-primary">Aplicar Filtros</button>
+                            </div>
+                        </form>
+                        </div>
+
+                        <div class="reviews-list">
+                            <!-- Reseña 1 -->
+                                    <h3>Reseñas de otros usuarios</h3>
+                                    {% for resena in reseñas %}
+                                        <div class="review-card">
+                                            <div class="review-header">
+                                                <div class="reviewer-info">
+                                                    {% comment %} Aquí podrías mostrar la imagen del usuario si la tienes {% endcomment %}
+                                                    <img src="https://via.placeholder.com/40x40/10b981/FFFFFF?text={{ resena.usuario.username|slice:":2"|upper }}"     alt="Avatar de {{ resena.usuario.username }}" class="reviewer-avatar"/>
+                                                    <div>
+                                                        <h4 class="reviewer-name">{{ resena.usuario.username }}</h4>
+                                                        <div class="review-meta">
+                                                            <span class="review-date">{{ resena.fecha }}</span>
+                                                            <div class="reviewer-rating">
+                                                            {% for i in "12345" %}
+                                                                {% if i|add:0 <= resena.calificacion %}
+                                                                    <i class="fas fa-star"></i>
+                                                                {% else %}
+                                                                    <i class="far fa-star"></i>
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                </div>
+                                            <div class="review-content">
+                                                <p>{{ resena.comentario }}</p>
+                                            </div>
+                                        </div>
+                                    {% empty %}
+                                        <p>Aún no hay reseñas para este libro. ¡Sé el primero en dejar una!</p>
+                                    {% endfor %}
+                            <!-- Paginación de reseñas -->
+                                    <div class="pagination">
+                                        <div class="page-links">
+                                            {% if reseñas.has_previous %}
+                                                <a href="?page_resenas=1#reviews-tab" class="pagination-btn">« Primero</a>
+                                                <a href="?page_resenas={{ reseñas.previous_page_number }}#reviews-tab" class="pagination-btn">‹ Anterior</a>
+                                            {% endif %}
+
+                                            {% for num in reseñas.paginator.page_range %}
+                                                {% if num == reseñas.number %}
+                                                    <button class="pagination-btn active" disabled>{{ num }}</button>
+                                                {% elif num > reseñas.number|add:'-3' and num < reseñas.number|add:'3' %}
+                                                    <a href="?page_resenas={{ num }}#reviews-tab" class="pagination-btn">{{ num }}</a>
+                                                {% endif %}
+                                            {% endfor %}
+
+                                            {% if reseñas.has_next %}
+                                                <a href="?page_resenas={{ reseñas.next_page_number }}#reviews-tab" class="pagination-btn">Siguiente ›</a>
+                                                <a href="?page_resenas={{ reseñas.paginator.num_pages }}#reviews-tab" class="pagination-btn">Último »</a>
+                                            {% endif %}
+                                        </div>
+                                        <span class="page-info">
+                                            Página {{ reseñas.number }} de {{ reseñas.paginator.num_pages }}
+                                        </span>
+                                    </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        </div>
+    </main>
+
+    <!-- Modal para escribir reseña -->
+<div id="reviewModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Escribir una reseña</h3>
+            <button id="closeReviewModal" class="close-modal">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="reviewForm" **method="post" action="{% url 'crear_resena' libro.id %}">**
+                {% csrf_token %}
+                <div class="form-section">
+                    <h4>Tu calificación</h4>
+                    <div class="modal-rating-input">
+                        <div class="star-rating large">
+                            <i class="far fa-star" data-rating="1"></i>
+                            <i class="far fa-star" data-rating="2"></i>
+                            <i class="far fa-star" data-rating="3"></i>
+                            <i class="far fa-star" data-rating="4"></i>
+                            <i class="far fa-star" data-rating="5"></i>
+                        </div>
+                        <span class="rating-text">Selecciona una calificación</span>
+                        <input type="hidden" id="id_calificacion" name="calificacion">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h4>Tu reseña</h4>
+                    <div class="form-group">
+                        <label for="reviewTitle">Título de tu reseña</label>
+                        <input type="text" id="reviewTitle" name="comentario" placeholder="Escribe un título para tu reseña" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reviewContent">Contenido de tu reseña</label>
+                        <textarea id="reviewContent" rows="6" name="comentario"
+                            placeholder="Comparte tus pensamientos sobre este libro..." required></textarea>
+                        <p class="form-help">Mínimo 50 caracteres. No incluyas enlaces o contenido inapropiado.</p>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" id="cancelReview" class="btn btn-outline" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Publicar reseña</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <img src="https://via.placeholder.com/40x40/10b981/FFFFFF?text=BV" alt="Logo Biblioteca Virtual">
+                    <h3>Biblioteca Virtual</h3>
+                </div>
+                <p>&copy; <span id="currentYear">2023</span> Biblioteca Virtual. Todos los derechos reservados.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{% static 'js/detalle.js'%}"></script>
+</body>
+
+</html>

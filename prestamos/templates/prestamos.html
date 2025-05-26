@@ -1,0 +1,398 @@
+    {% load static %}
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Mis Préstamos - BiblioVirtual</title>
+        <link rel="stylesheet" href="{% static 'css/prestamos.css' %}">
+        <!-- Fuente de Google Fonts -->
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <!-- Font Awesome para iconos -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    </head>
+    <body>
+        <!-- Header -->
+        <header class="header">
+            <div class="container">
+                <div class="logo">
+                    <img src="https://via.placeholder.com/40/10b981/FFFFFF?text=B" alt="Logo BiblioVirtual">
+                    <h1>BiblioVirtual</h1>
+                </div>
+                <nav class="main-nav">
+                    <ul>
+                        <li><a href="{% url 'inicio' %}">Inicio</a></li>
+                        <li><a href="{% url 'catalogo' %}" >Catálogo</a></li>
+                        <li><a href="{% url 'prestamos:prestamos' %}" class="active">Prestamos</a></li>
+                    </ul>
+                </nav>
+                <div class="auth-buttons">
+                {% if request.user.is_authenticated %}
+                    <span class="welcome-msg">Bienvenido {{ request.user.username }}</span>
+                    <form method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Cerrar sesión</button>
+                    </form>
+                {% else %}
+                    <a href="{% url 'login' %}" class="btn btn-outline active">Iniciar Sesión</a>
+                    <a href="{% url 'registro' %}" class="btn btn-primary">Registrarse</a>
+                {% endif %}
+                </div>
+                <button class="menu-toggle" id="menuToggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Mobile Menu -->
+        <div class="mobile-menu" id="mobileMenu">
+            <ul>
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="catalogo.html">Catálogo</a></li>
+                <li><a href="prestamos.html" class="active">Mis Préstamos</a></li>
+                <li><a href="#">Colecciones</a></li>
+                <li class="mobile-user">
+                    <img src="https://via.placeholder.com/32/10b981/FFFFFF?text=U" alt="Usuario" class="user-avatar">
+                    <span>Ana García</span>
+                </li>
+                <li><a href="#"><i class="fas fa-user"></i> Mi Perfil</a></li>
+                <li><a href="#"><i class="fas fa-heart"></i> Favoritos</a></li>
+                <li><a href="#"><i class="fas fa-history"></i> Historial</a></li>
+                <li><a href="#"><i class="fas fa-cog"></i> Configuración</a></li>
+                <li><a href="login.html" class="logout"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a></li>
+            </ul>
+        </div>
+
+        <main>
+            {% if user.is_authenticated %}
+            <div class="loans-container">
+                <div class="container">
+                    <div class="loans-header">
+                        <h2>Mis Préstamos</h2>
+                        <p>Gestiona tus libros prestados y fechas de vencimiento</p>
+                        <button class="btn btn-primary new-loan-btn" id="newLoanBtn">
+                            <i class="fas fa-plus"></i>
+                            Solicitar Nuevo Préstamo
+                        </button>
+                    </div>
+
+                    <div class="loans-tabs">
+                        <button class="tab-btn active" data-tab="current">
+                            <i class="fas fa-book"></i>
+                            Préstamos Actuales
+                            <span class="count">{{ prestamos_actuales_count }}</span>
+                        </button>
+                        <button class="tab-btn" data-tab="history">
+                            <i class="fas fa-history"></i>
+                            Historial
+                            <span class="count">{{ historial_prestamos_count }}</span>
+                        </button>
+                    </div>
+
+                    <div class="loans-content">
+                        <!-- Filtros y búsqueda -->
+                        <div class="loans-filters">
+                            <div class="search-box">
+                                <input type="text" id="searchLoans" placeholder="Buscar por título o autor...">
+                                <button class="search-btn">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <div class="filter-options">
+                                <select id="statusFilter">
+                                    <option value="all">Todos los estados</option>
+                                    <option value="ontime">Al día</option>
+                                    <option value="soon">Próximos a vencer</option>
+                                    <option value="overdue">Vencidos</option>
+                                </select>
+                                <select id="sortLoans">
+                                    <option value="duedate-asc">Fecha de vencimiento (próximos)</option>
+                                    <option value="duedate-desc">Fecha de vencimiento (lejanos)</option>
+                                    <option value="title-asc">Título (A-Z)</option>
+                                    <option value="title-desc">Título (Z-A)</option>
+                                    <option value="loandate-desc">Más recientes</option>
+                                    <option value="loandate-asc">Más antiguos</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Tab: Préstamos Actuales -->
+                        <div class="tab-content active" id="current-tab">
+                            <div class="loans-summary">
+                                <div class="summary-card">
+                                    <div class="summary-icon">
+                                        <i class="fas fa-book"></i>
+                                    </div>
+                                    <div class="summary-info">
+                                        <h3>{{ prestamos_actuales|length }}</h3>
+                                        <p>Préstamos Activos</p>
+                                    </div>
+                                </div>
+                                </div>
+
+                            <div class="loans-list">
+                                {% for prestamo in prestamos_actuales %}
+                                    <div class="loan-card {% if prestamo.estado == 'vencido' %}overdue{% elif prestamo.fecha_devolucion <= today|date:'Y-m-d'|add:'7' %}soon{% else %}ontime{% endif %}">
+                                        <div class="loan-status">
+                                            <span class="status-badge">{{ prestamo.get_estado_display }}</span>
+                                            {% if prestamo.estado == 'vencido' %}
+                                                <span class="overdue-days">Vencido</span> {% elif prestamo.fecha_devolucion <= today|date:'Y-m-d'|add:'7' %}
+                                                <span class="soon-days">Próximo a vencer</span> {% endif %}
+                                        </div>
+                                        <div class="loan-book">
+                                            {% if prestamo.libro.portada %}
+                                                <img src="{{ prestamo.libro.portada.url }}" alt="{{ prestamo.libro.titulo }}">
+                                            {% elif prestamo.libro.portada_url %}
+                                                <img src="{{ prestamo.libro.portada_url }}" alt="{{ prestamo.libro.titulo }}">
+                                            {% else %}
+                                                <img src="https://via.placeholder.com/120x180/cccccc/FFFFFF?text=Sin+Portada" alt="Sin Portada">
+                                            {% endif %}
+                                            <div class="loan-book-info">
+                                                <h3>{{ prestamo.libro.titulo }}</h3>
+                                                <p class="book-author">{{ prestamo.libro.autor }}</p>
+                                                <div class="book-meta">
+                                                    <span><i class="fas fa-bookmark"></i> {{ prestamo.libro.genero.nombre_genero }}</span>
+                                                    <span><i class="fas fa-calendar"></i> {{ prestamo.libro.año_publicacion }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="loan-details">
+                                            <div class="loan-date">
+                                                <span class="label">Prestado el:</span>
+                                                <span class="value">{{ prestamo.fecha_prestamo }}</span>
+                                            </div>
+                                            <div class="due-date">
+                                                <span class="label">Fecha de vencimiento:</span>
+                                                <span class="value">{{ prestamo.fecha_vencimiento }}</span>
+                                            </div>
+                                            </div>
+                                        <div class="loan-actions">
+                                            <a href="{% url 'prestamos:devolver_libro' prestamo.id %}" class="btn btn-outline">
+                                                <i class="fas fa-undo"></i>
+                                                Devolver
+                                            </a>
+                                        </div>
+                                    </div>
+                                {% empty %}
+                                    <p>No tienes préstamos activos.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Tab: Historial -->
+                        <div class="tab-content" id="history-tab">
+                            <div class="loans-history-header">
+                                <h3>Historial de Préstamos</h3>
+                                <p>Tus préstamos completados</p>
+                            </div>
+
+                            <div class="loans-history-table">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Libro</th>
+                                            <th>Fecha de préstamo</th>
+                                            <th>Fecha de devolución</th>
+                                            <th>Estado</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for prestamo in historial_prestamos %}
+                                            <tr>
+                                                <td class="book-cell">
+                                                    {% if prestamo.libro.portada %}
+                                                        <img src="{{ prestamo.libro.portada.url }}" alt="{{ prestamo.libro.titulo }}">
+                                                    {% elif prestamo.libro.portada_url %}
+                                                        <img src="{{ prestamo.libro.portada_url }}" alt="{{ prestamo.libro.titulo }}">
+                                                    {% else %}
+                                                        <img src="https://via.placeholder.com/40x60/cccccc/FFFFFF?text=Sin+Portada" alt="Sin Portada">
+                                                    {% endif %}
+                                                    <div>
+                                                        <h4>{{ prestamo.libro.titulo }}</h4>
+                                                        <p>{{ prestamo.libro.autor }}</p>
+                                                    </div>
+                                                </td>
+                                                <td>{{ prestamo.fecha_prestamo }}</td>
+                                                <td>{{ prestamo.fecha_devolucion}}</td>
+                                                <td><span class="status-pill completed">{{ prestamo.get_estado_display }}</span></td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline" disabled>
+                                                        <i class="fas fa-redo"></i>
+                                                        Volver a pedir
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        {% empty %}
+                                            <tr><td colspan="5">No tienes historial de préstamos.</td></tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            </div>
+
+                </div>
+            </div>
+            {% else %}
+                <div style="text-align: center; padding: 50px;">
+                <h2>Necesitas iniciar sesión para ver o pedir préstamos.</h2>
+                <a href="{% url 'login' %}" class="btn btn-primary" style="margin-top: 20px;">Iniciar Sesión</a>
+            </div>
+        {% endif %}
+
+        </main>
+
+        <!-- Modal de Nuevo Préstamo -->
+        <div class="modal" id="loanModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Solicitar Nuevo Préstamo</h3>
+                    <button class="close-modal" id="closeModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                <form id="loanForm" method="POST" action="{% url 'prestamos:solicitar_prestamo' %}">
+                        {% csrf_token %}
+                        <div class="form-section">
+                            <h4>1. Selecciona los libros</h4>
+                            <div class="book-selection">
+                                <div class="search-box">
+                                    <input type="text" id="searchBooks" placeholder="Buscar libros por título o autor...">
+                                    <button type="button" class="search-btn">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+
+                                <div class="available-books">
+                                    {% for libro_disponible in libros_disponibles %}
+                                        <div class="book-option">
+                                            <input type="checkbox" id="book{{ libro_disponible.id }}" name="books" value="{{ libro_disponible.id }}">
+                                            <label for="book{{ libro_disponible.id }}">
+                                                {% if libro_disponible.portada %}
+                                                    <img src="{{ libro_disponible.portada.url }}" alt="{{ libro_disponible.titulo }}">
+                                                {% elif libro_disponible.portada_url %}
+                                                    <img src="{{ libro_disponible.portada_url }}" alt="{{ libro_disponible.titulo }}">
+                                                {% else %}
+                                                    <img src="https://via.placeholder.com/60x90/cccccc/FFFFFF?text=Sin+Portada" alt="Sin Portada">
+                                                {% endif %}
+                                                <div class="book-info">
+                                                    <h5>{{ libro_disponible.titulo }}</h5>
+                                                    <p>{{ libro_disponible.autor }}</p>
+                                                    <span class="book-availability disponible">Disponible</span>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    {% empty %}
+                                        <p>No hay libros disponibles para préstamo en este momento.</p>
+                                    {% endfor %}
+                                </div>
+                                <div
+                                    hx-post="{% url 'prestamos:libros_seleccionados' %}"
+                                    hx-trigger="change from:input[name='books']"
+                                    hx-target="#selectedBooksContainer"
+                                    hx-swap="outerHTML">
+                                </div>
+
+                                <!-- Este div es el que será reemplazado por HTMX con los libros seleccionados -->
+                                <div class="selected-books" id="selectedBooksContainer">
+                                    {% include 'includes/selected_books_list.html' with libros_seleccionados=libros_seleccionados %}
+                                </div>
+                                <!---
+                                <div class="selected-books" id="selectedBooksContainer">
+                                    <div hx-post="{% url 'prestamos:libros_seleccionados' %}"
+                                         hx-trigger="change from:input[name='books']"
+                                         hx-target="#selectedBooksContainer"
+                                         hx-swap="outerHTML">
+                                        {% include 'includes/selected_books_list.html' with libros_seleccionados=libros_seleccionados %}
+                                    </div>
+                                </div> -->
+                                <div class="form-section">
+                                    <h4>2. Elige la fecha de devolución</h4>
+                                    <div class="date-selection">
+                                        <label for="returnDate">Selecciona una fecha (máximo 30 días):</label>
+                                        <input type="date" id="returnDate" name="returnDate" required hx-post="{% url 'prestamos:actualizar_resumen' %}" hx-target="#loanSummary" hx-swap="outerHTML">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4>3. Confirma tu préstamo</h4>
+                            <div class="loan-summary" id="loanSummary">
+                                {% include 'includes/loan_summary.html' with selected_books=selected_books return_date=return_date %}
+                            </div>
+
+                            <div class="loan-terms">
+                                <label class="terms-checkbox">
+                                    <input type="checkbox" id="termsAccepted" name="termsAccepted" required>
+                                    <span>Acepto los <a href="#" class="terms-link">términos y condiciones</a> de préstamo de la biblioteca</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-outline" id="cancelLoan">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" id="confirmLoan">Confirmar Préstamo</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <div class="container">
+                <div class="footer-content">
+                    <div class="footer-logo">
+                        <img src="https://via.placeholder.com/40/10b981/FFFFFF?text=B" alt="Logo BiblioVirtual">
+                        <h3>BiblioVirtual</h3>
+                    </div>
+                    <p>© <span id="currentYear"></span> BiblioVirtual. Todos los derechos reservados.</p>
+                    <div class="footer-links">
+                        <a href="#">Términos</a>
+                        <a href="#">Privacidad</a>
+                        <a href="#">Ayuda</a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+
+        <script src="{% static 'js/prestamos.js' %}"></script>
+
+
+<!---<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const checkboxes = document.querySelectorAll('input[type="checkbox"][name="books"]');
+    const selectedBooksContainer = document.getElementById('selectedBooksContainer');
+
+    function updateSelectedBooksDisplay() {
+        const selected = Array.from(checkboxes).filter(cb => cb.checked);
+        const count = selected.length;
+
+        // Construimos la lista HTML
+        let listItems = selected.map(cb => {
+            const label = document.querySelector(`label[for="${cb.id}"]`);
+            const titleElement = label?.querySelector('h5');
+            const title = titleElement?.innerText || 'Título desconocido';
+            return `<li>${title}</li>`;
+        }).join('');
+
+        // Actualizamos el contenedor
+        selectedBooksContainer.innerHTML = `
+            <h5>Libros seleccionados: ${count}</h5>
+            <ul>${listItems}</ul>
+        `;
+    }
+
+    checkboxes.forEach(cb => cb.addEventListener('change', updateSelectedBooksDisplay));
+
+    // Llamamos al cargar por si hay alguno ya seleccionado
+    updateSelectedBooksDisplay();
+});
+</script> -->
+    </body>
+    </html>

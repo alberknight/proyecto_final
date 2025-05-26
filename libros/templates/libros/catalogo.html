@@ -1,0 +1,286 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo de Libros - BiblioVirtual</title>
+    <link rel="stylesheet" href="{% static 'css/catalogo.css' %}">
+    <!-- Fuente de Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <img src="https://via.placeholder.com/40/10b981/FFFFFF?text=B" alt="Logo BiblioVirtual">
+                <h1>BiblioVirtual</h1>
+            </div>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="{% url 'inicio' %}">Inicio</a></li>
+                    <li><a href="{% url 'catalogo' %}" class="active">Catálogo</a></li>
+                    <li><a href="{% url 'prestamos:prestamos' %}">Prestamos</a></li>
+                </ul>
+            </nav>
+            <div class="auth-buttons">
+            {% if request.user.is_authenticated %}
+                <span class="welcome-msg">Bienvenido {{ request.user.username }}</span>
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Cerrar sesión</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}" class="btn btn-outline active">Iniciar Sesión</a>
+                <a href="{% url 'registro' %}" class="btn btn-primary">Registrarse</a>
+            {% endif %}
+            </div>
+            <button class="menu-toggle" id="menuToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        <ul>
+            <li><a href="{% url 'inicio' %}">Inicio</a></li>
+            <li><a href="{% url 'catalogo' %}" class="active">Catálogo</a></li>
+            <li><a href="{% url 'prestamos:prestamos' %}">Prestamos</a></li>
+            <li class="mobile-auth">
+                    <!-- Falta agregar la lógica -->
+                <a href="{% url 'login' %}" class="btn btn-outline">Iniciar Sesión</a>
+                <a href="{% url 'registro' %}" class="btn btn-primary">Registrarse</a>
+            </li>
+        </ul>
+    </div>
+
+    <main>
+        <div class="catalog-container">
+            <div class="container">
+                <div class="catalog-header">
+                    <h2>Catálogo de Libros</h2>
+                    <p>Explora nuestra colección de libros y encuentra tu próxima lectura</p>
+                </div>
+
+                <div class="catalog-layout">
+                    <aside class="catalog-filters">
+                    <form method="get">
+                        <div class="filter-header">
+                            <h3>Búsqueda Avanzada</h3>
+                            <button class="toggle-filters" id="toggleFilters" type="button">
+                                <i class="fas fa-sliders-h"></i>
+                            </button>
+                        </div>
+
+                        <div class="filters-body" id="filtersBody">
+                            <!-- Buscador -->
+                            <div class="search-box">
+                            <form method="get">
+                                <input type="text" id="searchInput" name="q" placeholder="Buscar por título, autor..." value="{{ query }}">
+                                <button class="search-btn" type="submit">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </form>
+                            </div>
+
+                            <!-- Categorías dinámicas -->
+                            <div class="filter-group">
+                                <h4>Categorías</h4>
+                                <div class="filter-options">
+                                    {% for genero in generos %}
+                                    <label class="filter-option">
+                                        <input type="checkbox" name="categoria" value="{{ genero.id }}" {% if genero.id|stringformat:"s" in categorias_seleccionadas %}checked{% endif %}>
+                                        <span>{{ genero.nombre_genero }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Autores -->
+                            <div class="filter-group">
+                                <h4>Autores</h4>
+                                    <div class="filter-options">
+                                    {% for autor in autores %}
+                                        <label class="filter-option">
+                                            <input type="checkbox" name="autor" value="{{ autor }}"
+                                                {% if autor in autores_seleccionados %}checked{% endif %}>
+                                            <span>{{ autor }}</span>
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Año -->
+                            <div class="filter-group">
+                                <h4>Año de Publicación</h4>
+                                <div class="range-slider">
+                                    <div class="range-values">
+                                        <span id="yearMin">{{ anyo_min }}</span>
+                                        <span id="yearMax">{{ anyo_max }}</span>
+                                    </div>
+                                    <div class="range-inputs">
+                                        <input type="range" name="anyo_min" id="yearMinRange"
+                                            min="{{ rango_anyos.min_anyo }}" max="{{ rango_anyos.max_anyo }}" value="{{ anyo_min }}" class="range">
+                                        <input type="range" name="anyo_max" id="yearMaxRange"
+                                            min="{{ rango_anyos.min_anyo }}" max="{{ rango_anyos.max_anyo }}" value="{{ anyo_max }}" class="range">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Disponibilidad -->
+                            <div class="filter-group">
+                                <h4>Disponibilidad</h4>
+                                <label><input type="checkbox" name="disponibilidad" value="disponible" {% if request.GET.disponibilidad == 'disponible' %}checked{% endif %}> Disponible</label>
+                            </div>
+
+                            <!-- Calificación (todavía no funcional, pero preparado) -->
+                            <div class="filter-group">
+                                <h4>Calificación</h4>
+                                <select name="calificacion_min">
+                                    <option value="">Cualquiera</option>
+                                    {% for i in "54321" %}
+                                        <option value="{{ i }}" {% if request.GET.calificacion_min == i %}selected{% endif %}>{{ i }} estrellas o más</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Botones -->
+                            <div class="filter-actions">
+                                <button type="submit" class="btn btn-primary">Aplicar Filtros</button>
+                                <a href="{% url 'catalogo' %}" class="btn btn-outline">Restablecer</a>
+                            </div>
+                        </div>
+                    </form>
+                </aside>
+
+                    <!-- Resultados del catálogo -->
+                    <div class="catalog-results">
+                        <div class="results-header">
+                            <div class="results-count">
+                                <span>Mostrando {{ page_obj.start_index }}-{{ page_obj.end_index }} de {{ paginator.count }} resultados</span>
+                            </div>
+                            <div class="results-sort">
+                                <label for="sortBy">Ordenar por:</label>
+                                <select id="sortBy">
+                                    <option value="relevance">Relevancia</option>
+                                    <option value="newest">Más recientes</option>
+                                    <option value="oldest">Más antiguos</option>
+                                    <option value="title-asc">Título (A-Z)</option>
+                                    <option value="title-desc">Título (Z-A)</option>
+                                    <option value="rating-desc">Mejor calificados</option>
+                                </select>
+                            </div>
+                            <div class="view-options">
+                                <button class="view-option active" data-view="grid">
+                                    <i class="fas fa-th-large"></i>
+                                </button>
+                                <button class="view-option" data-view="list">
+                                    <i class="fas fa-list"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="books-grid" id="booksContainer">
+                        {% for libro in libros %}
+                        <a href="{% url 'detalle_libro' libro.id %}" class="book-card-link" style="text-decoration: none; color: inherit;">
+                            <div class="book-card">
+                                <div class="book-cover">
+                                    {% if libro.portada %}
+                                        <img src="{{ libro.portada.url }}" alt="{{ libro.titulo }}">
+                                    {% else %}
+                                        <img src="https://via.placeholder.com/120x160?text=Sin+Portada" alt="Sin portada">
+                                    {% endif %}
+                                    <div class="book-availability {% if libro.disponibilidad %}available{% else %}borrowed{% endif %}">
+                                        <span>{% if libro.disponibilidad %}Disponible{% else %}Prestado{% endif %}</span>
+                                    </div>
+                                </div>
+                                <div class="book-info">
+                                    <h3 class="book-title">{{ libro.titulo }}</h3>
+                                    <p class="book-author">{{ libro.autor }}</p>
+                                    <div class="book-meta">
+                                        <span class="book-category">{{ libro.genero.nombre_genero }}</span>
+                                        <span class="book-year">{{ libro.año_publicacion }}</span>
+                                    </div>
+                                    <div class="book-actions">
+                                        <button class="btn btn-outline btn-sm" type="button">
+                                            <i class="far fa-heart"></i>
+                                            Guardar
+                                        </button>
+                                        <button class="btn btn-primary btn-sm" type="button">
+                                            <i class="fas fa-book-open"></i>
+                                            Leer
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                        {% empty %}
+                        <p>No hay libros disponibles en este momento.</p>
+                        {% endfor %}
+                        </div>
+                        {% with request.GET.urlencode as query_string %}
+                            {% with query_string|cut:'page='|cut:'&' as query_params %}
+                            <div class="pagination">
+                                <div class="page-links">
+                                    {% if page_obj.paginator.num_pages > 1 %}
+                                        <a href="?page=1&{{ query_params }}" class="pagination-btn">« Primero</a>
+                                    {% endif %}
+                                    {% if page_obj.has_previous %}
+                                        <a href="?page={{ page_obj.previous_page_number }}&{{ query_params }}" class="pagination-btn">‹ Anterior</a>
+                                    {% endif %}
+
+                                    {% for num in page_obj.paginator.page_range %}
+                                        {% if num == page_obj.number %}
+                                            <button class="pagination-btn active" disabled>{{ num }}</button>
+                                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                            <a href="?page={{ num }}&{{ query_params }}" class="pagination-btn">{{ num }}</a>
+                                        {% endif %}
+                                    {% endfor %}
+
+                                    {% if page_obj.has_next %}
+                                        <a href="?page={{ page_obj.next_page_number }}&{{ query_params }}" class="pagination-btn">Siguiente ›</a>
+                                    {% endif %}
+                                    {% if page_obj.paginator.num_pages > 1 %}
+                                        <a href="?page={{ page_obj.paginator.num_pages }}&{{ query_params }}" class="pagination-btn">Último »</a>
+                                    {% endif %}
+                                </div>
+
+                                <div class="page-info">
+
+                                    Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                                </div>
+                            </div>
+                            {% endwith %}
+                        {% endwith %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <img src="https://via.placeholder.com/40/10b981/FFFFFF?text=B" alt="Logo BiblioVirtual">
+                    <h3>BiblioVirtual</h3>
+                </div>
+                <p>© <span id="currentYear"></span> BiblioVirtual. Todos los derechos reservados.</p>
+                <div class="footer-links">
+                    <a href="#">Términos</a>
+                    <a href="#">Privacidad</a>
+                    <a href="#">Ayuda</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{% static 'js/catalogo.js'%}"></script>
+</body>
+</html>

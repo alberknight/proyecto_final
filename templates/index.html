@@ -1,0 +1,107 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BiblioVirtual - Sistema de Gestión de Biblioteca</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <!-- Fuente de Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <img src="https://via.placeholder.com/40" alt="Logo BiblioVirtual">
+                <h1>BiblioVirtual</h1>
+            </div>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="{% url 'inicio' %}" class="active">Inicio</a></li>
+                    <li><a href="{% url 'catalogo' %}">Catálogo</a></li>
+                    <li><a href="{% url 'prestamos:prestamos' %}">Prestamos</a></li>
+                </ul>
+            </nav>
+            <div class="auth-buttons">
+            {% if request.user.is_authenticated %}
+                <span class="welcome-msg">Bienvenido {{ request.user.username }}</span>
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Cerrar sesión</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}" class="btn btn-outline active">Iniciar Sesión</a>
+                <a href="{% url 'registro' %}" class="btn btn-primary">Registrarse</a>
+            {% endif %}
+            </div>
+            <button class="menu-toggle" id="menuToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        <ul>
+            <li><a href="{% url 'inicio' %}" class="active">Inicio</a></li>
+            <li><a href="{% url 'catalogo' %}">Catálogo</a></li>
+            <li><a href="{% url 'prestamos:prestamos' %}">Prestamos</a></li>
+            <li class="mobile-auth">
+                {% if request.user.is_authenticated %}
+                    <span class="welcome-msg">Bienvenido {{ request.user.username }}</span><br>
+                    <form method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Cerrar sesión</button>
+                    </form>
+                {% else %}
+                    <a href="{% url 'login' %}" class="btn btn-outline active">Iniciar Sesión</a>
+                    <a href="{% url 'registro' %}" class="btn btn-primary">Registrarse</a>
+                {% endif %}
+            </li>
+        </ul>
+    </div>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="container">
+                <h2>Tu biblioteca virtual al alcance de un clic</h2>
+                <p>Descubre, gestiona y disfruta de miles de libros digitales en nuestra plataforma.</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-about">
+                    <div class="logo">
+                        <img src="https://via.placeholder.com/40" alt="Logo BiblioVirtual">
+                        <h3>BiblioVirtual</h3>
+                    </div>
+                    <p>Tu plataforma de gestión de biblioteca virtual favorita.</p>
+                </div>
+                <div class="footer-contact">
+                    <h4>Contacto</h4>
+                    <ul>
+                        <li>Email: info@bibliovirtual.com</li>
+                        <li>Teléfono: 55555555</li>
+                        <li>Conocida</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; <span id="currentYear"></span> BiblioVirtual. Todos los derechos reservados.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{% static 'js/script.js' %}" defer></script>
+</body>
+</html>
